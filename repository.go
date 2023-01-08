@@ -22,7 +22,7 @@ type Repository interface {
 	GetValue([]byte) []byte
 	SetValue(key, value []byte)
 	EditValue([]byte)
-	DeleteValue() bool // might change this
+	DeleteValue([]byte) bool // might change this
 }
 
 type CommandsRepository struct {
@@ -77,6 +77,10 @@ func (c *CommandsRepository) GetValue(k []byte) ([]byte, error) {
 	return v, err
 }
 
-/*
-func (c *CommandsRepository) DeleteValue() bool {}
-*/
+func (c *CommandsRepository) DeleteValue(k []byte) error {
+	err := c.db.Update(func(txn *badger.Txn) error {
+		err := txn.Delete(k)
+		return err
+	})
+	return err
+}

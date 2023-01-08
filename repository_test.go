@@ -139,6 +139,49 @@ func TestSetValue(t *testing.T) {
 	}
 }
 
+func TestDeleteValue(t *testing.T) {
+	tests := []struct {
+		input []Command
+		key   []byte
+	}{
+		{
+			input: []Command{
+				{[]byte("hello"), []byte("world")},
+				{[]byte("milk"), []byte("cereal")},
+			},
+			key: []byte("hello"),
+		},
+		{
+			input: []Command{
+				{[]byte("hello"), []byte("world")},
+				{[]byte("milk"), []byte("cereal")},
+			},
+			key: []byte("new"), // TODO: why does this pass
+		},
+	}
+
+	for _, tc := range tests {
+		db, err := InitInMemoryDB()
+		if err != nil {
+			t.Fatalf("unable to init in-memory DB: %v", err)
+		}
+		defer db.Close()
+		c := CommandsRepository{db}
+
+		for _, cmd := range tc.input {
+			if err := c.SetValue(cmd.key, cmd.value); err != nil {
+				t.Fatalf("unable to set value: %v", err)
+			}
+		}
+		if err := c.DeleteValue(tc.key); err != nil {
+			t.Fatalf("unable to delete value: %v", err)
+		}
+		if v, _ := c.GetValue(tc.key); string(v) != "this command does not exist" {
+			t.Fatalf("command still exists: %v", err)
+		}
+	}
+}
+
 func InitInMemoryDB() (*badger.DB, error) {
 	opt := badger.DefaultOptions("").WithInMemory(true).WithLogger(nil)
 	return badger.Open(opt)
