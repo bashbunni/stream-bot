@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -22,7 +20,7 @@ type Command struct {
 type Repository interface {
 	GetAll() []string
 	GetValue(string) string
-	SetValue(string)
+	SetValue(key, value []byte)
 	EditValue(string)
 	DeleteValue() bool // might change this
 }
@@ -42,7 +40,6 @@ func (c *CommandsRepository) GetAll() ([]Command, error) {
 			item := it.Item()
 			k := item.Key()
 			err := item.Value(func(v []byte) error {
-				fmt.Printf("key=%s, value=%s\n", k, v) // TODO: remove this
 				cmds = append(cmds, Command{key: k, value: v})
 				return nil
 			})
@@ -58,9 +55,16 @@ func (c *CommandsRepository) GetAll() ([]Command, error) {
 	return cmds, nil
 }
 
+func (c *CommandsRepository) SetValue(k, v []byte) error {
+	err := c.db.Update(func(txn *badger.Txn) error {
+		err := txn.Set(k, v)
+		return err
+	})
+	return err
+}
+
 /*
 func (c *CommandsRepository) GetValue(string) string {}
-func (c *CommandsRepository) SetValue(string)        {}
 func (c *CommandsRepository) EditValue(string)       {}
 func (c *CommandsRepository) DeleteValue() bool      {}
 */
