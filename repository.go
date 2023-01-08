@@ -78,6 +78,5 @@ func (c *CommandsRepository) GetValue(k []byte) ([]byte, error) {
 }
 
 /*
-func (c *CommandsRepository) EditValue(string)  {}
 func (c *CommandsRepository) DeleteValue() bool {}
 */

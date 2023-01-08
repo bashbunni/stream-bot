@@ -89,6 +89,56 @@ func TestGetValue(t *testing.T) {
 	}
 }
 
+func TestSetValue(t *testing.T) {
+	tests := []struct {
+		input    []Command
+		key      []byte
+		newValue []byte
+	}{
+		{
+			input: []Command{
+				{[]byte("hello"), []byte("world")},
+				{[]byte("milk"), []byte("cereal")},
+			},
+			key:      []byte("hello"),
+			newValue: []byte("chat"),
+		},
+		{
+			input: []Command{
+				{[]byte("hello"), []byte("world")},
+				{[]byte("milk"), []byte("cereal")},
+			},
+			key:      []byte("new"),
+			newValue: []byte("value"),
+		},
+	}
+
+	for _, tc := range tests {
+		db, err := InitInMemoryDB()
+		if err != nil {
+			t.Fatalf("unable to init in-memory DB: %v", err)
+		}
+		defer db.Close()
+		c := CommandsRepository{db}
+
+		for _, cmd := range tc.input {
+			if err := c.SetValue(cmd.key, cmd.value); err != nil {
+				t.Fatalf("unable to set value: %v", err)
+			}
+		}
+		if err := c.SetValue(tc.key, tc.newValue); err != nil {
+			t.Fatalf("unable to set value: %v", err)
+		}
+		got, err := c.GetValue(tc.key)
+		if err != nil {
+			t.Fatalf("unable to get commands: %v", err)
+		}
+		if !reflect.DeepEqual(got, tc.newValue) {
+			t.Fatalf("got != want;\n%v != %v", got, tc.newValue)
+		}
+	}
+}
+
 func InitInMemoryDB() (*badger.DB, error) {
 	opt := badger.DefaultOptions("").WithInMemory(true).WithLogger(nil)
 	return badger.Open(opt)
