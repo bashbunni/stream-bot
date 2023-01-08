@@ -18,10 +18,10 @@ type Command struct {
 }
 
 type Repository interface {
-	GetAll() []string
-	GetValue(string) string
+	GetAll() ([]Command, error) // TODO ask about this
+	GetValue([]byte) []byte
 	SetValue(key, value []byte)
-	EditValue(string)
+	EditValue([]byte)
 	DeleteValue() bool // might change this
 }
 
@@ -63,8 +63,21 @@ func (c *CommandsRepository) SetValue(k, v []byte) error {
 	return err
 }
 
+func (c *CommandsRepository) GetValue(k []byte) ([]byte, error) {
+	var v []byte
+	err := c.db.View(func(txn *badger.Txn) error {
+		i, err := txn.Get(k)
+		if err != nil {
+			v = []byte("this command does not exist")
+			return nil
+		}
+		v, err = i.ValueCopy(v)
+		return err
+	})
+	return v, err
+}
+
 /*
-func (c *CommandsRepository) GetValue(string) string {}
-func (c *CommandsRepository) EditValue(string)       {}
-func (c *CommandsRepository) DeleteValue() bool      {}
+func (c *CommandsRepository) EditValue(string)  {}
+func (c *CommandsRepository) DeleteValue() bool {}
 */

@@ -20,10 +20,8 @@ func main() {
 	if err := c.SetValue([]byte("hello"), []byte("world")); err != nil {
 		log.Fatal(err)
 	}
-	cmds, err := c.GetAll()
-	for _, val := range cmds {
-		fmt.Printf("key: %s, val: %s\n", val.key, val.value)
-	}
+	v, err := c.GetValue([]byte("hello"))
+	fmt.Print(string(v))
 	if err != nil {
 		log.Fatal(err)
 	}
