@@ -7,12 +7,30 @@ import (
 	"github.com/dgraph-io/badger/v3"
 )
 
+func initializeDatabaseStartingValues(t testing.TB, cmds []Command, db badger.DB, cmdRepo CommandsRepository) {
+	t.Helper()
+	for _, cmd := range cmds {
+		if err := cmdRepo.SetValue(cmd.key, cmd.value); err != nil {
+			t.Fatalf("unable to set value: %v", err)
+		}
+	}
+}
+
+func initializeTestingCommandRepo(t *testing.T) CommandsRepository {
+	t.Helper()
+	db, err := initInMemoryDB()
+	if err != nil {
+		t.Fatalf("unable to init in-memory DB: %v", err)
+	}
+	return CommandsRepository{db}
+}
+
 func TestGetAll(t *testing.T) {
 	tests := []struct {
-		want []Command
+		input []Command
 	}{
 		{
-			want: []Command{
+			input: []Command{
 				{[]byte("hello"), []byte("world")},
 				{[]byte("milk"), []byte("cereal")},
 			},
@@ -20,24 +38,16 @@ func TestGetAll(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		db, err := InitInMemoryDB()
-		if err != nil {
-			t.Fatalf("unable to init in-memory DB: %v", err)
-		}
-		defer db.Close()
-		c := CommandsRepository{db}
+		c := initializeTestingCommandRepo(t)
+		defer c.db.Close()
 
-		for _, cmd := range tc.want {
-			if err := c.SetValue(cmd.key, cmd.value); err != nil {
-				t.Fatalf("unable to set value: %v", err)
-			}
-		}
+		initializeDatabaseStartingValues(t, tc.input, *c.db, c)
 		got, err := c.GetAll()
 		if err != nil {
 			t.Fatalf("unable to get commands: %v", err)
 		}
-		if !reflect.DeepEqual(got, tc.want) {
-			t.Fatalf("got != want;\n%v != %v", got, tc.want)
+		if !reflect.DeepEqual(got, tc.input) {
+			t.Fatalf("got != want;\n%v != %v", got, tc.input)
 		}
 	}
 }
@@ -67,18 +77,11 @@ func TestGetValue(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		db, err := InitInMemoryDB()
-		if err != nil {
-			t.Fatalf("unable to init in-memory DB: %v", err)
-		}
-		defer db.Close()
-		c := CommandsRepository{db}
+		c := initializeTestingCommandRepo(t)
+		defer c.db.Close()
 
-		for _, cmd := range tc.input {
-			if err := c.SetValue(cmd.key, cmd.value); err != nil {
-				t.Fatalf("unable to set value: %v", err)
-			}
-		}
+		initializeDatabaseStartingValues(t, tc.input, *c.db, c)
+
 		got, err := c.GetValue(tc.key)
 		if err != nil {
 			t.Fatalf("unable to get commands: %v", err)
@@ -114,18 +117,11 @@ func TestSetValue(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		db, err := InitInMemoryDB()
-		if err != nil {
-			t.Fatalf("unable to init in-memory DB: %v", err)
-		}
-		defer db.Close()
-		c := CommandsRepository{db}
+		c := initializeTestingCommandRepo(t)
+		defer c.db.Close()
 
-		for _, cmd := range tc.input {
-			if err := c.SetValue(cmd.key, cmd.value); err != nil {
-				t.Fatalf("unable to set value: %v", err)
-			}
-		}
+		initializeDatabaseStartingValues(t, tc.input, *c.db, c)
+
 		if err := c.SetValue(tc.key, tc.newValue); err != nil {
 			t.Fatalf("unable to set value: %v", err)
 		}
@@ -161,28 +157,21 @@ func TestDeleteValue(t *testing.T) {
 	}
 
 	for _, tc := range tests {
-		db, err := InitInMemoryDB()
-		if err != nil {
-			t.Fatalf("unable to init in-memory DB: %v", err)
-		}
-		defer db.Close()
-		c := CommandsRepository{db}
+		c := initializeTestingCommandRepo(t)
+		defer c.db.Close()
 
-		for _, cmd := range tc.input {
-			if err := c.SetValue(cmd.key, cmd.value); err != nil {
-				t.Fatalf("unable to set value: %v", err)
-			}
-		}
+		initializeDatabaseStartingValues(t, tc.input, *c.db, c)
+
 		if err := c.DeleteValue(tc.key); err != nil {
 			t.Fatalf("unable to delete value: %v", err)
 		}
 		if v, _ := c.GetValue(tc.key); string(v) != "this command does not exist" {
-			t.Fatalf("command still exists: %v", err)
+			t.Fatalf("command still exists after being deleted")
 		}
 	}
 }
 
-func InitInMemoryDB() (*badger.DB, error) {
+func initInMemoryDB() (*badger.DB, error) {
 	opt := badger.DefaultOptions("").WithInMemory(true).WithLogger(nil)
 	return badger.Open(opt)
 }
