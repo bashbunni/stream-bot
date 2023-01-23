@@ -1,6 +1,8 @@
 package main
 
 import (
+	"errors"
+
 	"github.com/dgraph-io/badger/v3"
 )
 
@@ -68,7 +70,9 @@ func (c *CommandsRepository) GetValue(k []byte) ([]byte, error) {
 	err := c.db.View(func(txn *badger.Txn) error {
 		i, err := txn.Get(k)
 		if err != nil {
-			v = []byte("this command does not exist")
+			if errors.Is(err, badger.ErrKeyNotFound) {
+				v = []byte("this command does not exist")
+			}
 			return nil
 		}
 		v, err = i.ValueCopy(v)
